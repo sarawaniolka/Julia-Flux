@@ -90,7 +90,7 @@ end
 # optimising the weights β
 # ƞ - learning rate
 # ϵ - stopping criterion
-function solve!(β, X, y; ƞ = 0.001, ϵ= 10^-10, maxit = 50_000)
+function solve!(β, X, y; ƞ = 0.001, ϵ= 10^-10, maxit = 500)
     iter = 1
     Js = Float64[]
     J, ∇ = simple_∇(β, X, y)
