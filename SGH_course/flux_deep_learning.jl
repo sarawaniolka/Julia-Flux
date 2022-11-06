@@ -59,9 +59,79 @@ end
 pow(2, 4)
 gradient(x -> pow(x, 3), 5)
 
-# Zygote.jl allows us to calculate derivvatives easily
+# Zygote.jl allows us to calculate derivatives easily
 using Zygote
 y, back = Zygote.pullback(sin, π);
 y
 back(1)
 gradient(sin,π) == back(1)
+
+
+# Flux.train!(objective(loss function), data, opt function)
+# train works only for one epoch
+
+# we can loop or use an operator:
+using Base.Iterators: repeated
+dataset = repeated((x, y), 200)
+
+
+# Example
+using Flux, Statistics
+using Flux: onehotbatch, onecold, crossentropy, throttle, params
+using Base.Iterators: repeated
+using MLDatasets: MNIST
+using ImageCore
+
+imgs, labels = MNIST.traindata();
+MNIST.convert2image(imgs)[:,:,5]
+
+labels[5]
+
+# Classify MNIST digits with a simple multi-layer-perceptron
+
+# Stack images into one large batch
+X = reshape(float.(imgs),size(imgs,1) * size(imgs,2),size(imgs,3))
+
+# One-hot-encode the labels
+Y = onehotbatch(labels, 0:9)
+
+
+# defining the model
+m = Chain(
+  Dense(28^2, 32, relu),
+  Dense(32, 10),
+  softmax) 
+
+loss(x, y) = crossentropy(m(x), y)
+
+accuracy(x, y) = mean(onecold(m(x)) .== onecold(y))
+
+dataset = repeated((X, Y), 200)
+evalcb = () -> @show(loss(X, Y))
+opt = ADAM()
+
+accuracy(X, Y)
+# training
+Flux.train!(loss, params(m), dataset, opt, cb=throttle(evalcb, 10))
+
+# the best way to store results is in bson
+accuracy(X, Y)
+
+
+
+m = Chain(
+  Dense(28^2, 100, relu),
+  Dense(100, 32, relu),
+  Dense(32, 10),
+  softmax) 
+
+Flux.train!(loss, params(m), dataset, opt, cb=throttle(evalcb, 10))
+accuracy(X, Y)
+
+
+
+MNIST.convert2image(X)[:,:,2543]
+labels[2543]
+
+onecold(m(X), 0:9)[2543]
+onecold(Y, 0:9)[2543]
